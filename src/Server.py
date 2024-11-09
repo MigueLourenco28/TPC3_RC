@@ -22,11 +22,31 @@ def sendMovie( fileName, cHost, cUDPport, sessionID):
 			dat=fr.read(imageLen)
 			if frameNo % 100 == 0:
 				print(f'nseq={frameNo} JPEG file size = {len(dat)}')
-			su.sendto( dat, dest)
+			#-----------Added-----------#
 			# TODO students shouldbuild the RTP header
 			# TODO and replace the sendto of byte array dat
 			# TODO by the concatenation of the RTP header with byte array dat
 			
+			# Build RTP header
+			header = bytearray(12)
+
+			header[0] = 0b10000000 # Versão 2, P=0, X=0, CC=0
+			header[1] = 26		   # PT = 26 para MJPEG
+			header[2] = (frameNo >> 8) & 0xFF
+			header[3] = frameNo & 0xFF
+
+			timestamp = int(time.time() * 1000)
+
+			header[4] = (timestamp >> 24) & 0xFF
+			header[5] = (timestamp >> 16) & 0xFF
+			header[6] = (timestamp >> 8) & 0xFF
+			header[7] = timestamp & 0xFF
+			header[8] = (sessionID >> 24) & 0xFF
+			header[9] = (sessionID >> 16) & 0xFF
+			header[10] = (sessionID >> 8) & 0xFF
+			header[11] = sessionID & 0xFF
+			#-----------Added-----------#
+			su.sendto(header + dat, dest)
 			time.sleep(0.05)  # one image every 50 ms
 			frameNo = frameNo+1
 

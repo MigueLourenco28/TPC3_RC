@@ -53,26 +53,47 @@ class Client:
         self.socketTCP.close() 
         
     def playJPEGs(self):
+        #-----------Added-----------#
+        last_seq_num = 0
+        #-----------Added-----------#
         while True:
             infds, outfds, errfds = select.select([self.socketUDP],[],[], 2)
             if infds==[]:
                 break
             dat, r = self.socketUDP.recvfrom( 16384 )
+            #-----------Added-----------#
             # TODO Students should extract the RTP header from the byte array received 
             # TODO Verify if header is correct according to the requirements stated in the assignment
             # TODO Only the part of the payload corresponding to the JPEG file should be written in the file
             # print(f'len={len(dat)}')
-            fw = open('temp.jpeg', 'wb')
-            fw.write(dat)
-            fw.close()
+
+            # Extrair cabeçalho RTP
+            header = dat[:12]
+            rtp_version = (header[0] >> 6) & 0x03
+            pt = header[1]
+            seq_num = (header[2] << 8) + header[3]
+            timestamp = (header[4] << 24) + (header[5] << 16) + (header[6] << 8) + header[7]
+            ssrc = (header[8] << 24) + (header[9] << 16) + (header[10] << 8) + header[11]
+
+            # Verificar cabeçalho RTP
+            if rtp_version != 2 or pt != 26 or ssrc != self.sessionId or seq_num <= last_seq_num:
+                print("Erro no cabeçalho RTP.")
+                continue
+            last_seq_num = seq_num
+
+            # Salvar o arquivo JPEG
+            jpeg_data = dat[12:]
+            print(f'len={len(jpeg_data)}')
+            with open(self.imageFile, 'wb') as fw:
+                fw.write(jpeg_data)
+            
             img = Image.open(self.imageFile)
-            w = img.width
-            l = img.height
-            # print(f'w={w}. l={l}')
+            w, l = img.width, img.height
+            print(f'w={w}, l={l}')
             photo = ImageTk.PhotoImage(img)
-            self.label.configure(image = photo,height=l)
+            self.label.configure(image=photo, height=l)
             self.label.image = photo
-            self.frameNo = self.frameNo+1
+            self.frameNo += 1
             
     def closeWindow(self):
         print("Destroying window")
