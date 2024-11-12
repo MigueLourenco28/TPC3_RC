@@ -46,7 +46,9 @@ def sendMovie( fileName, cHost, cUDPport, sessionID):
 			header[10] = (sessionID >> 8) & 0xFF
 			header[11] = sessionID & 0xFF
 			#-----------Added-----------#
+			#-----------Changed-----------#
 			su.sendto(header + dat, dest)
+			#-----------Changed-----------#
 			time.sleep(0.05)  # one image every 50 ms
 			frameNo = frameNo+1
 

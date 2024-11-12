@@ -55,6 +55,8 @@ class Client:
     def playJPEGs(self):
         #-----------Added-----------#
         last_seq_num = 0
+        last_timestamp = 0
+        initial_timestamp = None
         #-----------Added-----------#
         while True:
             infds, outfds, errfds = select.select([self.socketUDP],[],[], 2)
@@ -75,12 +77,22 @@ class Client:
             timestamp = (header[4] << 24) + (header[5] << 16) + (header[6] << 8) + header[7]
             ssrc = (header[8] << 24) + (header[9] << 16) + (header[10] << 8) + header[11]
 
+            if initial_timestamp is None:
+                initial_timestamp = timestamp
+
             # Verificar cabeçalho RTP
             if rtp_version != 2 or pt != 26 or ssrc != self.sessionId or seq_num <= last_seq_num:
                 print("Erro no cabeçalho RTP.")
                 continue
-            last_seq_num = seq_num
 
+            # Verificar timestamp
+            if timestamp < last_timestamp:
+                print("Pacote fora de ordem descartado.")
+                continue
+            
+            last_seq_num = seq_num
+            last_timestamp = timestamp
+            
             # Salvar o arquivo JPEG
             jpeg_data = dat[12:]
             print(f'len={len(jpeg_data)}')
@@ -94,6 +106,9 @@ class Client:
             self.label.configure(image=photo, height=l)
             self.label.image = photo
             self.frameNo += 1
+            
+        timestamp_difference = last_timestamp - initial_timestamp
+        print(f'timestamp={timestamp_difference}')
             
     def closeWindow(self):
         print("Destroying window")
